@@ -35,6 +35,13 @@ export function WithSSRAuth<P>(fn: GetServerSideProps<P>): GetServerSideProps {
           },
         };
       }
+
+      return {
+        redirect: {
+          destination: `/`,
+          permanent: false,
+        },
+      };
     }
   };
 }
