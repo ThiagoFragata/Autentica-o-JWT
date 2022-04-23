@@ -15,7 +15,8 @@ interface SignImCredentials {
 }
 
 interface AuthContextData {
-  signIn(credentials: SignImCredentials): Promise<void>;
+  signIn: (credentials: SignImCredentials) => Promise<void>;
+  signOut: () => void;
   user: UserProps | undefined;
   isAuthenticated: boolean;
 }
@@ -26,9 +27,13 @@ interface AuthProviderProps {
 
 export const AuthContext = createContext({} as AuthContextData);
 
+let authChannel: BroadcastChannel;
+
 export function signOut() {
   destroyCookie(undefined, "nextauth.token", { path: "/" });
   destroyCookie(undefined, "nextauth.refreshToken", { path: "/" });
+
+  authChannel.postMessage("signOut");
 
   Router.push("/");
 }
@@ -37,6 +42,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserProps>();
   const isAuthenticated = !!user;
 
+  // realização do logout em paginas múltiplas
+  useEffect(() => {
+    authChannel = new BroadcastChannel("auth");
+
+    authChannel.onmessage = (message) => {
+      switch (message.data) {
+        case "signOut":
+          destroyCookie(undefined, "nextauth.token", { path: "/" });
+          destroyCookie(undefined, "nextauth.refreshToken", { path: "/" });
+
+          Router.push("/");
+
+          break;
+
+        case "signIn":
+          Router.push("/dashboard");
+          break;
+        default:
+          break;
+      }
+    };
+  }, []);
+
+  // recuperar dados do user
   useEffect(() => {
     const { "nextauth.token": token } = parseCookies();
 
@@ -82,13 +111,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
       Router.push("/dashboard");
+
+      authChannel.postMessage("signIn");
     } catch (error) {
       console.error(error);
     }
   }
 
   return (
-    <AuthContext.Provider value={{ signIn, isAuthenticated, user }}>
+    <AuthContext.Provider value={{ signIn, signOut, isAuthenticated, user }}>
       {children}
     </AuthContext.Provider>
   );

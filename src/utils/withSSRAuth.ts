@@ -16,7 +16,7 @@ interface WithSSRAuthOptionsProps {
 
 export function WithSSRAuth<P>(
   fn: GetServerSideProps<P>,
-  options: WithSSRAuthOptionsProps
+  options?: WithSSRAuthOptionsProps
 ): GetServerSideProps {
   return async (
     ctx: GetServerSidePropsContext
